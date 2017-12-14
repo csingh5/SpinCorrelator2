@@ -1,0 +1,53 @@
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+//                          *** main.cpp ***                                 //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+
+#include <iostream>
+#include "Eigmesh.hpp"
+#include "Mesh.hpp"
+#include "W90.hpp"
+#include "BareSusceptibility.hpp"
+#include "RPASusceptibility.hpp"
+
+int main(int argc, char *argv[])
+{
+
+	std::string klist = "data/input/reduced_klist";
+	kelvin T = 2;
+	eV U = 1;
+	eV J = U / 10;
+	meV omega_min = 0;
+	meV omega_max = 20;
+	meV omega_stp = 0.1;
+	
+	RPASusceptibility X(klist, T);
+
+	// Figure 2 Alekseev a), b), c), d)
+	Eigen::Vector3d q1  = {0.000, 0.695, 0.695};  
+	Eigen::Vector3d q2  = {0.980, 0.690, 0.690};  
+	Eigen::Vector3d q3  = {0.760, 0.760, 0.760};  
+	Eigen::Vector3d q4  = {0.770, 0.260, 0.260};  
+	
+	// Figure 3 Alekseev a), b)
+	Eigen::Vector3d q5 = {0.380, 0.380, 0.380};  
+	Eigen::Vector3d q6 = {0.490, 0.490, 0.490};  
+
+	Eigen::MatrixXcd temporary;	
+
+	std::ofstream file("data/output/T2/q6/rpa_om_sweep.dat");
+	for (meV omega = omega_min; omega <= omega_max; omega += omega_stp) {
+		temporary = X(q6, omega, U, J);
+		file << std::scientific;
+		file << omega << "\t";
+		file << temporary.real().sum() << "\t";
+		file << temporary.imag().sum() << "\t";
+		file << temporary.real().trace() << "\t";
+		file << temporary.imag().trace() << "\n";
+		std::cout << 100.0 * omega / omega_max << "\n";
+	}
+	
+	return 0;
+}

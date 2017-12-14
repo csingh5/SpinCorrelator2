@@ -5,54 +5,115 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 
-#include "mpi.h"
 #include <iostream>
 #include "Eigmesh.hpp"
 #include "Mesh.hpp"
 #include "W90.hpp"
-#include "StaticMatrix.hpp"
 #include "BareSusceptibility.hpp"
+#include "TransverseSusceptibility.hpp"
+#include "LongitudinalSusceptibility.hpp"
+#include "utils.hpp"
+
 
 int main(int argc, char *argv[])
 {
+	
+	eV U = 1;
+	eV J = U / 10;
+	meV omega_min = 0;
+	meV omega_max = 20;
+	meV omega_stp = 0.1;
+	kelvin T = 2;
 
-	int world_rank, world_size;
-	MPI_Init(&argc, &argv);
-	MPI_Comm_size(MPI_COMM_WORLD, &world_size);
-	MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
+	std::string klist = "data/input/reduced.klist";
+	std::string outdir = "data/output/T" + std::to_string(static_cast<int>(T)) + "/";
+	
+	LongitudinalSusceptibility Xzz(klist, T);
+	TransverseSusceptibility Xpm(klist, T);
 
-	BareSusceptibility X("data/input/reduced_klist");
+	Eigen::MatrixXcd xzz, xpm;	
 
-	Eigen::Vector3d q1 = {0.380, 0.380, 0.380}; 
-	Eigen::Vector3d q2 = {0.980, 0.690, 0.690}; 
-	Eigen::Vector3d q3 = {0.000, 0.695, 0.695}; 
-	Eigen::Vector3d q4 = {0.770, 0.260, 0.260}; 
+	// Figure 2 Alekseev a), b), c), d)
+	Eigen::Vector3d q1  = {0.000, 0.695, 0.695};  
+	Eigen::Vector3d q2  = {0.980, 0.690, 0.690};  
+	Eigen::Vector3d q3  = {0.760, 0.760, 0.760};  
+	Eigen::Vector3d q4  = {0.770, 0.260, 0.260};  
+	
+	// Figure 3 Alekseev a), b)
+	Eigen::Vector3d q5 = {0.380, 0.380, 0.380};  
+	Eigen::Vector3d q6 = {0.490, 0.490, 0.490};  
 
-	std::ofstream q1file("data/output/T2/q1/omega" + std::to_string(world_rank/2.0));
-	q1file << X(q1, world_rank/2.0) << std::endl;
-	q1file.close();
+	Eigen::Vector3d p00 = {M_PI, 0, 0};
+	Eigen::Vector3d pp0 = {M_PI, M_PI, 0};
+	Eigen::Vector3d ppp = {M_PI, M_PI , M_PI};
 
-	if (world_rank == 0) std::cout << "finished q1" << std::endl;
+	std::ofstream realzz, realpm;
+	std::string realzz_filename = "rpa_realzz_omega_sweep.dat";
+	std::string realpm_filename = "rpa_realpm_omega_sweep.dat";
+
+	std::ofstream imagzz, imagpm;
+	std::string imagzz_filename = "rpa_imagzz_omega_sweep.dat";
+	std::string imagpm_filename = "rpa_imagpm_omega_sweep.dat";
+
+	for (meV omega = omega_min; omega <= omega_max; omega += omega_stp) {
+
+		xzz = Xzz(ppp, omega, U, J);
+		xpm = Xpm(ppp, omega, U, J);
+
+		Eigen::ArrayXcd intra_xzz = intra_orbital_channel(xzz);
+		Eigen::ArrayXcd intra_xpm = intra_orbital_channel(xpm);
 		
-	std::ofstream q2file("data/output/T2/q2/omega" + std::to_string(world_rank/2.0));
-	q2file << X(q2, world_rank/2.0) << std::endl;
-	q2file.close();
+		realzz.open(outdir + "ppp/" + realzz_filename, std::ios::app);
+		realpm.open(outdir + "ppp/" + realpm_filename, std::ios::app);
+		imagzz.open(outdir + "ppp/" + imagzz_filename, std::ios::app);
+		imagpm.open(outdir + "ppp/" + imagpm_filename, std::ios::app);
+		
+		realzz << std::scientific;
+		realzz << omega << "\t";
+		realzz << xzz.real().sum() << "\t";
+		realzz << xzz.real().trace() << "\t";
+		realzz << inter_orbital_sum(xzz).real() << "\t";
+		realzz << intra_xzz.real().sum() << "\t";
+		realzz << intra_xzz(0).real() + intra_xzz(1).real() << "\t";
+		realzz << intra_xzz.real().sum() - (intra_xzz(0).real() + intra_xzz(1).real()) << "\n";
+	
+		realpm << std::scientific;
+		realpm << omega << "\t";
+		realpm << xpm.real().sum() << "\t";
+		realpm << xpm.real().trace() << "\t";
+		realpm << inter_orbital_sum(xpm).real() << "\t";
+		realpm << intra_xpm.real().sum() << "\t";
+		realpm << intra_xpm(0).real() + intra_xpm(1).real() << "\t";
+		realpm << intra_xpm.real().sum() - (intra_xpm(0).real() + intra_xpm(1).real()) << "\n";
 
-	if (world_rank == 0) std::cout << "finished q2" << std::endl;
+		imagzz << std::scientific;
+		imagzz << omega << "\t";
+		imagzz << xzz.imag().sum() << "\t";
+		imagzz << xzz.imag().trace() << "\t";
+		imagzz << inter_orbital_sum(xzz).imag() << "\t";
+		imagzz << intra_xzz.imag().sum() << "\t";
+		imagzz << intra_xzz(0).imag() + intra_xzz(1).imag() << "\t";
+		imagzz << intra_xzz.imag().sum() - (intra_xzz(0).imag() + intra_xzz(1).imag()) << "\n";
 	
-	std::ofstream q3file("data/output/T2/q3/omega" + std::to_string(world_rank/2.0));
-	q3file << X(q4, world_rank/2.0) << std::endl;
-	q3file.close();
+		imagpm << std::scientific;
+		imagpm << omega << "\t";
+		imagpm << xpm.imag().sum() << "\t";
+		imagpm << xpm.imag().trace() << "\t";
+		imagpm << inter_orbital_sum(xpm).imag() << "\t";
+		imagpm << intra_xpm.imag().sum() << "\t";
+		imagpm << intra_xpm(0).imag() + intra_xpm(1).imag() << "\t";
+		imagpm << intra_xpm.imag().sum() - (intra_xpm(0).imag() + intra_xpm(1).imag()) << "\n";
 
-	if (world_rank == 0) std::cout << "finished q3" << std::endl;
-	
-	std::ofstream q4file("data/output/T2/q4/omega" + std::to_string(world_rank/2.0));
-	q4file << X(q3, world_rank/2.0) << std::endl;
-	q4file.close();
-	
-	if (world_rank == 0) std::cout << "finished q4" << std::endl;
-	
-	MPI_Finalize();	
+		realzz.close();
+		realpm.close();
+		imagzz.close();
+		imagpm.close();
+
+		std::cout << 100.0 * omega / omega_max << "\n";
+	}
+
+
+
 
 	return 0;
 }

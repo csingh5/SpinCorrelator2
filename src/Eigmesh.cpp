@@ -12,7 +12,7 @@
 #include "Eigmesh.hpp"
 #include <iostream>
 
-Eigmesh::Eigmesh(std::string klist) : Mesh(klist) {
+Eigmesh::Eigmesh(std::string klist, kelvin T) : Mesh(klist), m_T(T) {
 	m_eig.reserve(size());	
 }
 	
@@ -70,7 +70,7 @@ nelec Eigmesh::occupation(int mesh_point_index, int band_index) {
 int Eigmesh::dimension() { return m_eig[0].eigenvalues().size(); }
 
 inline double Eigmesh::fermi(eV epsilon) {
-	return 1.0 / (exp( (1.0/(kb*temp)) * (epsilon - chemical_potential)) + 1.0);
+	return 1.0 / (exp((1.0 / (kb * m_T)) * (epsilon - chemical_potential)) + 1.0);
 }
 
 inline nelec Eigmesh::flevel_occ() {

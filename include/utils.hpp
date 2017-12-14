@@ -18,6 +18,40 @@
 #include <vector>
 #include <cassert>
 
+
+Eigen::ArrayXcd 
+intra_orbital_channel(const Eigen::MatrixXcd& X) 
+{
+	
+	int L12 = 0, L34 = 0, numorbs = 9, i = 0;
+
+	Eigen::ArrayXcd value = Eigen::ArrayXcd::Zero(numorbs);
+
+	for (int L1 = 0; L1 < numorbs; ++L1) {
+		for (int L2 = 0; L2 < numorbs; ++L2) { 
+			for (int L3 = 0; L3 < numorbs; ++L3) { 
+				for (int L4 = 0; L4 < numorbs; ++L4) {
+					if (L1 == L2 && L2 == L3 && L3 == L4) value(i++) = X(L12, L34);	
+					++L34;
+				}
+			}
+			L34 = 0;
+			++L12;
+		}
+	}
+
+	return value;
+}
+
+std::complex<double>
+inter_orbital_sum(const Eigen::MatrixXcd& X) 
+{
+	return X.sum() - intra_orbital_channel(X).sum();
+}
+
+
+
+
 Eigen::MatrixXcd toEigenMatrix(std::string matrix_file) {
 	std::ifstream file(matrix_file);
 	assert(file.is_open());

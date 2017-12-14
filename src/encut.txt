@@ -1,0 +1,59 @@
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+//                          *** main.cpp ***                                 //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+
+#include <iostream>
+#include "Eigmesh.hpp"
+#include "Mesh.hpp"
+#include "W90.hpp"
+#include "BareSusceptibility.hpp"
+#include "RPASusceptibility.hpp"
+
+int main(int argc, char *argv[])
+{
+
+	std::string klist = "data/input/coarse_weighted.klist";
+	std::string qlist = "data/input/full.qlist";
+	kelvin T = 2;
+	eV U = 1;
+	eV J = U / 10;
+	meV omega_min = 0;
+	meV omega_max = 20;
+	meV omega_stp = 0.1;
+	
+	BareSusceptibility X(klist, T);
+	Mesh qmesh(qlist);
+
+	Eigen::MatrixXcd temporary;	
+	Eigen::Vector3d q;
+
+	std::ofstream file;
+
+	for (meV omega = omega_min; omega <= omega_max; omega += omega_stp) {
+		for (int qpoint = 0; qpoint < qmesh.size(); ++qpoint) {
+
+			q = qmesh.point(qpoint);
+			if (q(0) == 0 && q(1) == 0 && q(2) == 0) continue;
+			
+			temporary = X(q, omega);
+			
+			file.open("data/output/encut/bare_omega" + std::to_string(omega), std::ios::app);
+
+			file << std::scientific;
+			file << q(0) << "\t" << q(1) << "\t" << q(2) << "\t";
+			file << temporary.real().sum() << "\t";
+			file << temporary.imag().sum() << "\t";
+			file << temporary.real().trace() << "\t";
+			file << temporary.imag().trace() << "\n";
+			
+			file.close();
+		}
+
+		std::cout << 100.0 * omega / omega_max << "\n";
+	}
+	
+	return 0;
+}

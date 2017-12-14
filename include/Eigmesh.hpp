@@ -23,7 +23,7 @@ using kelvin = double;
 class Eigmesh : public Mesh
 {
 public:
-	Eigmesh(std::string klist);
+	Eigmesh(std::string klist, kelvin T);
 	
 	eV eigenvalue(int mesh_point_index, int band_index);
 	
@@ -51,8 +51,8 @@ public:
 
 private:
 	std::vector<saes_t> m_eig;
-   	eVperKelvin kb = 8.61733e-5;
-    kelvin temp = 2;
+	eVperKelvin kb = 8.61733e-5;
+	kelvin m_T;
 	eV chemical_potential = 0;
 	
 	inline double fermi(eV epsilon);

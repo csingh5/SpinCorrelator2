@@ -5,14 +5,14 @@
 ###############################################################################
 
 #------------ Compilers ------------#
-XC := mpiicpc 
+XC := icpc 
 FC := ifort
 CC := icc
 
 #------------ File Tree ------------#
 SRC_DIR := src
 OBJ_DIR := build
-TARGET := bin/spincor2_mpi.x
+TARGET := bin/main.x
 
 #------------ Variables ------------#
 SRCEXT := cpp
@@ -20,7 +20,7 @@ SRC := $(shell find $(SRC_DIR) -type f -name *.$(SRCEXT))
 OBJ := $(patsubst $(SRC_DIR)/%,$(OBJ_DIR)/%,$(SRC:.$(SRCEXT)=.o))
 
 #---------- Compile Flags ----------#
-XFLAGS := -std=c++11 -march=native -Ofast
+XFLAGS := -std=c++11 -fast
 FFLAGS := -std=15 -march=native -O2
 
 #---------- Linker Flags -----------#
